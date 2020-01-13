@@ -1,11 +1,29 @@
-clase = """Station
-  final int stationID;
-  String stationName;
-  double latitude;
-  double longitude;
-  String referencePoints;
-  String stationPhoto;
-  Parish parishID;"""
+clase = """Measurement
+  int measurementID;
+  final Observation observationID;
+  final DateTime registeredTo;
+  Period periodID;
+  final bool hangoverCurrent;
+  final double latitude;
+  final double longitude;
+  final double temp;
+  final int beachOrientation;
+  final double wideSurfArea;
+  final int distanceLPFloat;
+  final int distanceLPBreaker;
+  final double csSpace;
+  final int csTime;
+  final double csSpeed;
+  final String csDirection;
+  final int windDirection;
+  final double windSpeed;
+  final int waveOrthogonal;
+  final int waveApproachAngle;
+  BreakerType breakerTypeID;
+  final int timeElapsed;
+  final double averagePeriod;
+  final double averageWaveHeight;
+  State stateID;"""
 
 objetos = clase.split("\n")
 i = 0

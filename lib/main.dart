@@ -1,3 +1,5 @@
+import 'package:ciprrd_service/sql/Insert.dart';
+import 'package:ciprrd_service/sql/models.dart' as models;
 import 'package:sqflite/sqflite.dart';
 
 import 'sql/connection.dart';
@@ -9,7 +11,16 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
 
   void init() async{
-    Connection.getInstance().open("CIPRRDDB");
+    await Connection.getInstance().open("CIPRRDDB");
+    //await Connection.getInstance().delete("CIPRRDDB");
+    //await (await Connection.getInstance().database).execute("insert into Period(periodHour)	values('07:30')", );
+    //Province p = new Province(provinceName: "Guayas");
+   // int n = await p.save();
+    //Province p = (await Province.filter(where: "provinceID = ?", whereArgs: [1]))[0];
+    //Canton c = new Canton(cantonName: "Guayaquil", provinceID: p);
+    //c.save();
+    //print((await Canton.filter(where: "cantonID = ?", whereArgs: [1]))[0].toMap());
+    print((await models.Province.filter(orderBy: "provinceName")));
   }
   @override
   Widget build(BuildContext context){
@@ -26,7 +37,7 @@ class MyApp extends StatelessWidget {
         // or simply save your changes to "hot reload" in a Flutter IDE).
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
-        primarySwatch: Colors.green,
+        primarySwatch: Colors.blue,
       ),
       home: MyHomePage(title: 'Flutter Demo Home Page'),
     );

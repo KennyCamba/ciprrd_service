@@ -4,6 +4,8 @@ import 'package:sqflite/sqlite_api.dart';
 
 abstract class Model {
 
+  var id;
+
   external Map<String, dynamic> toMap();
 
   Future<int> save() async{
@@ -12,6 +14,29 @@ abstract class Model {
       this.runtimeType.toString(),
       this.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<int> update() async {
+    final Database db = await Connection.getInstance().database;
+    String table = this.runtimeType.toString();
+    String id = table[0].toLowerCase() + table.substring(1, table.length) + "ID";
+    return await db.update(
+        table,
+        this.toMap(),
+        where: id + " = ?",
+        whereArgs: [id],
+    );
+  }
+
+  Future<int> delete() async {
+    final Database db = await Connection.getInstance().database;
+    String table = this.runtimeType.toString();
+    String id = table[0].toLowerCase() + table.substring(1, table.length) + "ID";
+    return await db.delete(
+      table,
+      where: id + " = ?",
+      whereArgs: [id],
     );
   }
 
@@ -35,7 +60,9 @@ class Province extends Model{
   final int provinceID;
   String provinceName;
 
-  Province({this.provinceID, this.provinceName});
+  Province({this.provinceID, this.provinceName}){
+   super.id = this.provinceID;
+  }
 
   @override
   Map<String, dynamic> toMap(){
@@ -45,8 +72,8 @@ class Province extends Model{
     };
   }
   
-  static Future<List<Province>> objects(String query)async{
-    final List<Map<String, dynamic>> maps = await Model.query("Provinces", );
+  static Future<List<Province>> objects()async{
+    final List<Map<String, dynamic>> maps = await Model.query("Province", );
     return List.generate(maps.length, (i) {
       return Province(
           provinceID: maps[i]['provinceID'],
@@ -74,6 +101,12 @@ class Province extends Model{
       );
     });
   }
+
+  @override
+  String toString() {
+    return provinceName;
+  }
+
 }
 
 class Canton extends Model{
@@ -81,7 +114,9 @@ class Canton extends Model{
   String cantonName;
   Province provinceID;
 
-  Canton({this.cantonID, this.cantonName, this.provinceID});
+  Canton({this.cantonID, this.cantonName, this.provinceID}){
+    super.id = this.cantonID;
+  }
 
   @override
   Map<String, dynamic> toMap(){
@@ -92,12 +127,12 @@ class Canton extends Model{
     };
   }
 
-  static Future<List<Canton>> objects(String query) async{
-    final List<Map<String, dynamic>> maps = await Model.query("Cantons", );
+  static Future<List<Canton>> objects() async{
+    final List<Map<String, dynamic>> maps = await Model.query("Canton", );
     List<Canton> cantones = new List<Canton>();
     for(int i=0; i< maps.length; i++){
       Canton canton = new Canton(cantonID: maps[i]['cantonID'], cantonName: maps[i]['cantonName']);
-      canton.provinceID = (await Province.filter(where: "cantonID = ?", whereArgs: [maps[i]['provinceID']]))[0];
+      canton.provinceID = (await Province.filter(where: "provinceID = ?", whereArgs: [maps[i]['provinceID']]))[0];
       cantones.add(canton);
     }
     return cantones;
@@ -123,6 +158,12 @@ class Canton extends Model{
     }
     return cantones;
   }
+
+  @override
+  String toString() {
+    return cantonName;
+  }
+
 }
 
 class Parish extends Model{
@@ -130,7 +171,9 @@ class Parish extends Model{
   String parishName;
   Canton cantonID;
 
-  Parish({this.parishID, this.parishName, this.cantonID});
+  Parish({this.parishID, this.parishName, this.cantonID}){
+    super.id = this.parishID;
+  }
 
   @override
   Map<String, dynamic> toMap(){
@@ -141,8 +184,8 @@ class Parish extends Model{
     };
   }
 
-  static Future<List<Parish>> objects(String query) async{
-    final List<Map<String, dynamic>> maps = await Model.query("Parishs", );
+  static Future<List<Parish>> objects() async{
+    final List<Map<String, dynamic>> maps = await Model.query("Parish", );
     List<Parish> parishes = new List<Parish>();
     for(int i=0; i< maps.length; i++){
       Parish parish = new Parish(parishID: maps[i]['parishID'], parishName: maps[i]['parishName'], cantonID: maps[i]['cantonID']);
@@ -172,6 +215,11 @@ class Parish extends Model{
     }
     return parishes;
   }
+
+  @override
+  String toString() {
+    return parishName;
+  }
 }
 
 class Station extends Model{
@@ -182,9 +230,12 @@ class Station extends Model{
   String referencePoints;
   String stationPhoto;
   Parish parishID;
+  State stateID;
 
   Station({this.stationID, this.stationName, this.latitude, this.longitude,
-      this.referencePoints, this.stationPhoto, this.parishID});
+      this.referencePoints, this.stationPhoto, this.parishID, this.stateID}){
+      super.id = this.stationID;
+  }
 
   @override
   Map<String, dynamic> toMap(){
@@ -199,12 +250,13 @@ class Station extends Model{
     };
   }
 
-  static Future<List<Station>> objects(String query) async{
-    final List<Map<String, dynamic>> maps = await Model.query("Stations", );
+  static Future<List<Station>> objects() async{
+    final List<Map<String, dynamic>> maps = await Model.query("Station", );
     List<Station> stations = new List<Station>();
     for(int i=0; i< maps.length; i++){
       Station station = Station(stationID: maps[i]['stationID'], stationName: maps[i]['stationName'], latitude: maps[i]['latitude'], longitude: maps[i]['longitude'], referencePoints: maps[i]['referencePoints'], stationPhoto: maps[i]['stationPhoto']);
       station.parishID = (await Parish.filter(where: "parishID = ?", whereArgs: [maps[i]['parishID']]))[0];
+      station.stateID = (await State.filter(where: "stateID = ?", whereArgs: [maps[i]['stateID']]))[0];
       stations.add(station);
     }
     return stations;
@@ -227,17 +279,27 @@ class Station extends Model{
     for(int i=0; i< maps.length; i++){
       Station station = Station(stationID: maps[i]['stationID'], stationName: maps[i]['stationName'], latitude: maps[i]['latitude'], longitude: maps[i]['longitude'], referencePoints: maps[i]['referencePoints'], stationPhoto: maps[i]['stationPhoto']);
       station.parishID = (await Parish.filter(where: "parishID = ?", whereArgs: [maps[i]['parishID']]))[0];
+      station.stateID = (await State.filter(where: "stateID = ?", whereArgs: [maps[i]['stateID']]))[0];
       stations.add(station);
     }
     return stations;
   }
+
+  @override
+  String toString() {
+    return stationName;
+  }
+
+
 }
 
-/*class State extends Model<State>{
+class State extends Model{
   final int stateID;
   final String stateName;
 
-  State(this.stateID, this.stateName);
+  State({this.stateID, this.stateName}){
+      super.id = this.stateID;
+  }
 
   @override
   Map<String, dynamic> toMap(){
@@ -247,8 +309,17 @@ class Station extends Model{
     };
   }
 
-  @override
-  Future<List<State>> objects(String query, {bool distinct,
+  static Future<List<State>> objects() async{
+    final List<Map<String, dynamic>> maps = await Model.query("State", );
+    List<State> states = new List<State>();
+    for(int i=0; i< maps.length; i++){
+      State state = new State(stateID: maps[i]["stateID"], stateName: maps[i]["stateName"]);
+      states.add(state);
+    }
+    return states;
+  }
+
+  static Future<List<State>> filter({bool distinct,
     List<String> columns,
     String where,
     List<dynamic> whereArgs,
@@ -257,23 +328,25 @@ class Station extends Model{
     String orderBy,
     int limit,
     int offset}) async{
-    final List<Map<String, dynamic>> maps = await this.query(query, distinct: distinct, columns: columns,
+    final List<Map<String, dynamic>> maps = await Model.query("State", distinct: distinct, columns: columns,
         where: where, whereArgs: whereArgs, groupBy: groupBy, having: having, orderBy: orderBy,
         limit: limit, offset: offset);
-    return List.generate(maps.length, (i) {
-      return Province(
-          provinceID: maps[i]['provinceID'],
-          provinceName: maps[i]['provinceName']
-      );
-    });
+    List<State> states = new List<State>();
+    for(int i=0; i< maps.length; i++){
+      State state = new State(stateID: maps[i]["stateID"], stateName: maps[i]["stateName"]);
+      states.add(state);
+    }
+    return states;
   }
 }
 
-class MoonPhase extends Model<MoonPhase>{
+class MoonPhase extends Model{
   final int moonPhaseID;
   final String moonPhaseName;
 
-  MoonPhase(this.moonPhaseID, this.moonPhaseName);
+  MoonPhase({this.moonPhaseID, this.moonPhaseName}){
+    super.id = this.moonPhaseID;
+  }
 
   @override
   Map<String, dynamic> toMap(){
@@ -283,8 +356,17 @@ class MoonPhase extends Model<MoonPhase>{
     };
   }
 
-  @override
-  Future<List<MoonPhase>> objects(String query, {bool distinct,
+  static Future<List<MoonPhase>> objects() async{
+    final List<Map<String, dynamic>> maps = await Model.query("MoonPhase", );
+    List<MoonPhase> moonPhases = new List<MoonPhase>();
+    for(int i=0; i< maps.length; i++){
+      MoonPhase moonPhase = new MoonPhase(moonPhaseID: maps[i]["moonPhaseID"], moonPhaseName: maps[i]["moonPhaseName"]);
+      moonPhases.add(moonPhase);
+    }
+    return moonPhases;
+  }
+
+  static Future<List<MoonPhase>> filter({bool distinct,
     List<String> columns,
     String where,
     List<dynamic> whereArgs,
@@ -293,23 +375,30 @@ class MoonPhase extends Model<MoonPhase>{
     String orderBy,
     int limit,
     int offset}) async{
-    final List<Map<String, dynamic>> maps = await this.query(query, distinct: distinct, columns: columns,
+    final List<Map<String, dynamic>> maps = await Model.query("MoonPhase", distinct: distinct, columns: columns,
         where: where, whereArgs: whereArgs, groupBy: groupBy, having: having, orderBy: orderBy,
         limit: limit, offset: offset);
-    return List.generate(maps.length, (i) {
-      return Province(
-          provinceID: maps[i]['provinceID'],
-          provinceName: maps[i]['provinceName']
-      );
-    });
+    List<MoonPhase> moonPhases = new List<MoonPhase>();
+    for(int i=0; i< maps.length; i++){
+      MoonPhase moonPhase = new MoonPhase(moonPhaseID: maps[i]["moonPhaseID"], moonPhaseName: maps[i]["moonPhaseName"]);
+      moonPhases.add(moonPhase);
+    }
+    return moonPhases;
+  }
+
+  @override
+  String toString() {
+    return moonPhaseName;
   }
 }
 
-class BreakerType extends Model<BreakerType>{
+class BreakerType extends Model{
   final String breakerTypeID;
   final String breakerTypeName;
 
-  BreakerType(this.breakerTypeID, this.breakerTypeName);
+  BreakerType({this.breakerTypeID, this.breakerTypeName}){
+    super.id = this.breakerTypeID;
+  }
 
   @override
   Map<String, dynamic> toMap(){
@@ -319,8 +408,17 @@ class BreakerType extends Model<BreakerType>{
     };
   }
 
-  @override
-  Future<List<BreakerType>> objects(String query, {bool distinct,
+  static Future<List<BreakerType>> objects() async{
+    final List<Map<String, dynamic>> maps = await Model.query("BreakerType", );
+    List<BreakerType> breakersType = new List<BreakerType>();
+    for(int i=0; i< maps.length; i++){
+      BreakerType breakerType = new BreakerType(breakerTypeID: maps[i]["breakerTypeID"], breakerTypeName: maps[i]["breakerTypeName"]);
+      breakersType.add(breakerType);
+    }
+    return breakersType;
+  }
+
+  static Future<List<BreakerType>> filter({bool distinct,
     List<String> columns,
     String where,
     List<dynamic> whereArgs,
@@ -329,23 +427,32 @@ class BreakerType extends Model<BreakerType>{
     String orderBy,
     int limit,
     int offset}) async{
-    final List<Map<String, dynamic>> maps = await this.query(query, distinct: distinct, columns: columns,
+    final List<Map<String, dynamic>> maps = await Model.query("BreakerType", distinct: distinct, columns: columns,
         where: where, whereArgs: whereArgs, groupBy: groupBy, having: having, orderBy: orderBy,
         limit: limit, offset: offset);
-    return List.generate(maps.length, (i) {
-      return Province(
-          provinceID: maps[i]['provinceID'],
-          provinceName: maps[i]['provinceName']
-      );
-    });
+    List<BreakerType> breakersType = new List<BreakerType>();
+    for(int i=0; i< maps.length; i++){
+      BreakerType breakerType = new BreakerType(breakerTypeID: maps[i]["breakerTypeID"], breakerTypeName: maps[i]["breakerTypeName"]);
+      breakersType.add(breakerType);
+    }
+    return breakersType;
   }
+
+  @override
+  String toString() {
+    return '$breakerTypeID ($breakerTypeName)';
+  }
+
+
 }
 
-class Period extends Model<Period>{
+class Period extends Model{
   final int periodID;
   final DateTime periodHour;
 
-  Period(this.periodID, this.periodHour);
+  Period({this.periodID, this.periodHour}){
+    super.id = this.periodID;
+  }
 
   @override
   Map<String, dynamic> toMap(){
@@ -355,8 +462,17 @@ class Period extends Model<Period>{
     };
   }
 
-  @override
-  Future<List<Period>> objects(String query, {bool distinct,
+  static Future<List<Period>> objects() async{
+    final List<Map<String, dynamic>> maps = await Model.query("Period", );
+    List<Period> periods = new List<Period>();
+    for(int i=0; i< maps.length; i++){
+      Period period = new Period(periodID: maps[i]["periodID"], periodHour: DateFormat("HH:mm").parse(maps[i]["periodHour"]));
+      periods.add(period);
+    }
+    return periods;
+  }
+
+  static Future<List<Period>> filter({bool distinct,
     List<String> columns,
     String where,
     List<dynamic> whereArgs,
@@ -365,23 +481,30 @@ class Period extends Model<Period>{
     String orderBy,
     int limit,
     int offset}) async{
-    final List<Map<String, dynamic>> maps = await this.query(query, distinct: distinct, columns: columns,
+    final List<Map<String, dynamic>> maps = await Model.query("Period", distinct: distinct, columns: columns,
         where: where, whereArgs: whereArgs, groupBy: groupBy, having: having, orderBy: orderBy,
         limit: limit, offset: offset);
-    return List.generate(maps.length, (i) {
-      return Province(
-          provinceID: maps[i]['provinceID'],
-          provinceName: maps[i]['provinceName']
-      );
-    });
+    List<Period> periods = new List<Period>();
+    for(int i=0; i< maps.length; i++){
+      Period period = new Period(periodID: maps[i]["periodID"], periodHour: maps[i]["periodHour"]);
+      periods.add(period);
+    }
+    return periods;
+  }
+
+  @override
+  String toString() {
+    return DateFormat("HH:mm:ss").format(periodHour);
   }
 }
 
-class User extends Model<User>{
+class User extends Model{
   final int userID;
   final String username;
 
-  User(this.userID, this.username);
+  User({this.userID, this.username}){
+    super.id = this.userID;
+  }
 
   @override
   Map<String, dynamic> toMap(){
@@ -391,8 +514,17 @@ class User extends Model<User>{
     };
   }
 
-  @override
-  Future<List<User>> objects(String query, {bool distinct,
+  static Future<List<User>> objects() async{
+    final List<Map<String, dynamic>> maps = await Model.query("User", );
+    List<User> users = new List<User>();
+    for(int i=0; i< maps.length; i++){
+      User user = new User(userID: maps[i]["userID"], username: maps[i]["userHour"]);
+      users.add(user);
+    }
+    return users;
+  }
+
+  static Future<List<User>> filter({bool distinct,
     List<String> columns,
     String where,
     List<dynamic> whereArgs,
@@ -401,31 +533,33 @@ class User extends Model<User>{
     String orderBy,
     int limit,
     int offset}) async{
-    final List<Map<String, dynamic>> maps = await this.query(query, distinct: distinct, columns: columns,
+    final List<Map<String, dynamic>> maps = await Model.query("User", distinct: distinct, columns: columns,
         where: where, whereArgs: whereArgs, groupBy: groupBy, having: having, orderBy: orderBy,
         limit: limit, offset: offset);
-    return List.generate(maps.length, (i) {
-      return Province(
-          provinceID: maps[i]['provinceID'],
-          provinceName: maps[i]['provinceName']
-      );
-    });
+    List<User> users = new List<User>();
+    for(int i=0; i< maps.length; i++){
+      User user = new User(userID: maps[i]["userID"], username: maps[i]["userHour"]);
+      users.add(user);
+    }
+    return users;
   }
 }
 
-class Observation extends Model<Observation>{
+class Observation extends Model {
   int observationID;
   final DateTime observationDate;
   final String observationSeason;
-  final User userID;
-  final MoonPhase moonPhaseID;
-  final Station stationID;
+  User userID;
+  MoonPhase moonPhaseID;
+  Station stationID;
   State stateID;
   final DateTime registeredTo;
 
-  Observation(this.observationID, this.observationDate, this.observationSeason,
+  Observation({this.observationID, this.observationDate, this.observationSeason,
       this.userID, this.moonPhaseID, this.stationID, this.stateID,
-      this.registeredTo);
+      this.registeredTo}){
+    super.id = this.observationID;
+  }
 
   @override
   Map<String, dynamic> toMap(){
@@ -439,8 +573,22 @@ class Observation extends Model<Observation>{
     };
   }
 
-  @override
-  Future<List<Observation>> objects(String query, {bool distinct,
+  static Future<List<Observation>> objects() async{
+    final List<Map<String, dynamic>> maps = await Model.query("Observation", );
+    List<Observation> observations = new List<Observation>();
+    for(int i=0; i< maps.length; i++){
+      Observation observation = new Observation(observationID: maps[i]['observationID'], observationDate: maps[i]['observationDate'],
+          observationSeason: maps[i]['observationSeason'], registeredTo: maps[i]['registeredTo']);
+      observation.userID = (await User.filter(where: "userID = ?", whereArgs: [maps[i]['userID']]))[0];
+      observation.moonPhaseID = (await MoonPhase.filter(where: "moonPhaseID = ?", whereArgs: [maps[i]['moonPhaseID']]))[0];
+      observation.stationID = (await Station.filter(where: "stationID = ?", whereArgs: [maps[i]['stationID']]))[0];
+      observation.stateID = (await State.filter(where: "stateID = ?", whereArgs: [maps[i]['stateID']]))[0];
+      observations.add(observation);
+    }
+    return observations;
+  }
+
+  static Future<List<Observation>> filter({bool distinct,
     List<String> columns,
     String where,
     List<dynamic> whereArgs,
@@ -449,53 +597,60 @@ class Observation extends Model<Observation>{
     String orderBy,
     int limit,
     int offset}) async{
-    final List<Map<String, dynamic>> maps = await this.query(query, distinct: distinct, columns: columns,
+    final List<Map<String, dynamic>> maps = await Model.query("Observation", distinct: distinct, columns: columns,
         where: where, whereArgs: whereArgs, groupBy: groupBy, having: having, orderBy: orderBy,
         limit: limit, offset: offset);
-    return List.generate(maps.length, (i) {
-      return Province(
-          provinceID: maps[i]['provinceID'],
-          provinceName: maps[i]['provinceName']
-      );
-    });
+    List<Observation> observations = new List<Observation>();
+    for(int i=0; i< maps.length; i++){
+      Observation observation = new Observation(observationID: maps[i]['observationID'], observationDate: maps[i]['observationDate'],
+          observationSeason: maps[i]['observationSeason'], registeredTo: maps[i]['registeredTo']);
+      observation.userID = (await User.filter(where: "userID = ?", whereArgs: [maps[i]['userID']]))[0];
+      observation.moonPhaseID = (await MoonPhase.filter(where: "moonPhaseID = ?", whereArgs: [maps[i]['moonPhaseID']]))[0];
+      observation.stationID = (await Station.filter(where: "stationID = ?", whereArgs: [maps[i]['stationID']]))[0];
+      observation.stateID = (await State.filter(where: "stateID = ?", whereArgs: [maps[i]['stateID']]))[0];
+      observations.add(observation);
+    }
+    return observations;
   }
 }
 
-class Measurement extends Model<Measurement>{
-  int measurementID;
-  final Observation observationID;
-  final DateTime registeredTo;
-  final Period periodID;
-  final bool hangoverCurrent;
-  final double latitude;
-  final double longitude;
-  final double temp;
-  final int beachOrientation;
-  final double wideSurfArea;
-  final int distanceLPFloat;
-  final int distanceLPBreaker;
-  final double csSpace;
-  final int csTime;
-  final double csSpeed;
-  final String csDirection;
-  final int windDirection;
-  final double windSpeed;
-  final int waveOrthogonal;
-  final int waveApproachAngle;
-  final BreakerType breakerTypeID;
-  final int timeElapsed;
-  final double averagePeriod;
-  final double averageWaveHeight;
+class Measurement extends Model{
+  final int measurementID;
+  Observation observationID;
+  DateTime registeredTo;
+  Period periodID;
+  bool hangoverCurrent;
+  double latitude;
+  double longitude;
+  double temp;
+  int beachOrientation;
+  double wideSurfArea;
+  int distanceLPFloat;
+  int distanceLPBreaker;
+  double csSpace;
+  int csTime;
+  double csSpeed;
+  String csDirection;
+  int windDirection;
+  double windSpeed;
+  int waveOrthogonal;
+  int waveApproachAngle;
+  BreakerType breakerTypeID;
+  int timeElapsed;
+  double averagePeriod;
+  double averageWaveHeight;
   State stateID;
 
-  Measurement(this.measurementID, this.observationID, this.registeredTo,
+  Measurement({this.measurementID, this.observationID, this.registeredTo,
       this.periodID, this.hangoverCurrent, this.latitude, this.longitude,
       this.temp, this.beachOrientation, this.wideSurfArea, this.distanceLPFloat,
       this.distanceLPBreaker, this.csSpace, this.csTime, this.csSpeed,
       this.csDirection, this.windDirection, this.windSpeed,
       this.waveOrthogonal, this.waveApproachAngle, this.breakerTypeID,
       this.timeElapsed, this.averagePeriod, this.averageWaveHeight,
-      this.stateID);
+      this.stateID}){
+    super.id = this.measurementID;
+  }
 
   @override
   Map<String, dynamic> toMap(){
@@ -526,8 +681,27 @@ class Measurement extends Model<Measurement>{
     };
   }
 
-  @override
-  Future<List<Measurement>> objects(String query, {bool distinct,
+  static Future<List<Measurement>> objects() async{
+    final List<Map<String, dynamic>> maps = await Model.query("Measurement", );
+    List<Measurement> measurements = new List<Measurement>();
+    for(int i=0; i< maps.length; i++){
+      Measurement measurement = new Measurement(measurementID: maps[i]['measurementID'], registeredTo: maps[i]['registeredTo'], hangoverCurrent: maps[i]['hangoverCurrent'],
+          latitude: maps[i]['latitude'], longitude: maps[i]['longitude'], temp: maps[i]['temp'], beachOrientation: maps[i]['beachOrientation'],
+          wideSurfArea: maps[i]['wideSurfArea'], distanceLPFloat: maps[i]['distanceLPFloat'], distanceLPBreaker: maps[i]['distanceLPBreaker'],
+          csSpace: maps[i]['csSpace'], csTime: maps[i]['csTime'], csSpeed: maps[i]['csSpeed'], csDirection: maps[i]['csDirection'],
+          windDirection: maps[i]['windDirection'], windSpeed: maps[i]['windSpeed'], waveOrthogonal: maps[i]['waveOrthogonal'],
+          waveApproachAngle: maps[i]['waveApproachAngle'], timeElapsed: maps[i]['timeElapsed'], averagePeriod: maps[i]['averagePeriod'],
+          averageWaveHeight: maps[i]['averageWaveHeight']);
+      measurement.observationID = (await Observation.filter(where: "observationID = ?", whereArgs: [maps[i]['observationID']]))[0];
+      measurement.periodID = (await Period.filter(where: "periodID = ?", whereArgs: [maps[i]['periodID']]))[0];
+      measurement.breakerTypeID = (await BreakerType.filter(where: "breakerTypeID = ?", whereArgs: [maps[i]['breakerTypeID']]))[0];
+      measurement.stateID = (await State.filter(where: "stateID = ?", whereArgs: [maps[i]['stateID']]))[0];
+      measurements.add(measurement);
+    }
+    return measurements;
+  }
+
+  static Future<List<Measurement>> filter({bool distinct,
     List<String> columns,
     String where,
     List<dynamic> whereArgs,
@@ -536,27 +710,39 @@ class Measurement extends Model<Measurement>{
     String orderBy,
     int limit,
     int offset}) async{
-    final List<Map<String, dynamic>> maps = await this.query(query, distinct: distinct, columns: columns,
+    final List<Map<String, dynamic>> maps = await Model.query("Measurement", distinct: distinct, columns: columns,
         where: where, whereArgs: whereArgs, groupBy: groupBy, having: having, orderBy: orderBy,
         limit: limit, offset: offset);
-    return List.generate(maps.length, (i) {
-      return Province(
-          provinceID: maps[i]['provinceID'],
-          provinceName: maps[i]['provinceName']
-      );
-    });
+    List<Measurement> measurements = new List<Measurement>();
+    for(int i=0; i< maps.length; i++){
+      Measurement measurement = new Measurement(measurementID: maps[i]['measurementID'], registeredTo: maps[i]['registeredTo'], hangoverCurrent: maps[i]['hangoverCurrent'],
+          latitude: maps[i]['latitude'], longitude: maps[i]['longitude'], temp: maps[i]['temp'], beachOrientation: maps[i]['beachOrientation'],
+          wideSurfArea: maps[i]['wideSurfArea'], distanceLPFloat: maps[i]['distanceLPFloat'], distanceLPBreaker: maps[i]['distanceLPBreaker'],
+          csSpace: maps[i]['csSpace'], csTime: maps[i]['csTime'], csSpeed: maps[i]['csSpeed'], csDirection: maps[i]['csDirection'],
+          windDirection: maps[i]['windDirection'], windSpeed: maps[i]['windSpeed'], waveOrthogonal: maps[i]['waveOrthogonal'],
+          waveApproachAngle: maps[i]['waveApproachAngle'], timeElapsed: maps[i]['timeElapsed'], averagePeriod: maps[i]['averagePeriod'],
+          averageWaveHeight: maps[i]['averageWaveHeight']);
+      measurement.observationID = (await Observation.filter(where: "observationID = ?", whereArgs: [maps[i]['observationID']]))[0];
+      measurement.periodID = (await Period.filter(where: "periodID = ?", whereArgs: [maps[i]['periodID']]))[0];
+      measurement.breakerTypeID = (await BreakerType.filter(where: "breakerTypeID = ?", whereArgs: [maps[i]['breakerTypeID']]))[0];
+      measurement.stateID = (await State.filter(where: "stateID = ?", whereArgs: [maps[i]['stateID']]))[0];
+      measurements.add(measurement);
+    }
+    return measurements;
   }
 }
 
-class BreakingHeight extends Model<BreakingHeight>{
+class BreakingHeight extends Model{
   final int breakingHeightID;
-  final int numeral;
-  final double heightValue;
-  final Measurement measurementID;
+  int numeral;
+  double heightValue;
+  Measurement measurementID;
   State stateID;
 
-  BreakingHeight(this.breakingHeightID, this.numeral, this.heightValue,
-      this.measurementID, this.stateID);
+  BreakingHeight({this.breakingHeightID, this.numeral, this.heightValue,
+      this.measurementID, this.stateID}){
+    super.id = this.breakingHeightID;
+  }
 
   @override
   Map<String, dynamic> toMap(){
@@ -567,8 +753,19 @@ class BreakingHeight extends Model<BreakingHeight>{
     };
   }
 
-  @override
-  Future<List<BreakingHeight>> objects(String query, {bool distinct,
+  static Future<List<BreakingHeight>> objects() async{
+    final List<Map<String, dynamic>> maps = await Model.query("BreakingHeight", );
+    List<BreakingHeight> breakingHeights = new List<BreakingHeight>();
+    for(int i=0; i< maps.length; i++){
+      BreakingHeight breakingHeight = BreakingHeight(breakingHeightID: maps[i]['breakingHeightID'], numeral: maps[i]['numeral'], heightValue: maps[i]['heightValue']);
+      breakingHeight.measurementID = (await Measurement.filter(where: "measurementID = ?", whereArgs: [maps[i]['measurementID']]))[0];
+      breakingHeight.stateID = (await State.filter(where: "stateID = ?", whereArgs: [maps[i]['stateID']]))[0];
+      breakingHeights.add(breakingHeight);
+    }
+    return breakingHeights;
+  }
+
+  static Future<List<BreakingHeight>> filter({bool distinct,
     List<String> columns,
     String where,
     List<dynamic> whereArgs,
@@ -577,14 +774,16 @@ class BreakingHeight extends Model<BreakingHeight>{
     String orderBy,
     int limit,
     int offset}) async{
-    final List<Map<String, dynamic>> maps = await this.query(query, distinct: distinct, columns: columns,
+    final List<Map<String, dynamic>> maps = await Model.query("BreakingHeight", distinct: distinct, columns: columns,
         where: where, whereArgs: whereArgs, groupBy: groupBy, having: having, orderBy: orderBy,
         limit: limit, offset: offset);
-    return List.generate(maps.length, (i) {
-      return Province(
-          provinceID: maps[i]['provinceID'],
-          provinceName: maps[i]['provinceName']
-      );
-    });
+    List<BreakingHeight> breakingHeights = new List<BreakingHeight>();
+    for(int i=0; i< maps.length; i++){
+      BreakingHeight breakingHeight = BreakingHeight(breakingHeightID: maps[i]['breakingHeightID'], numeral: maps[i]['numeral'], heightValue: maps[i]['heightValue']);
+      breakingHeight.measurementID = (await Measurement.filter(where: "measurementID = ?", whereArgs: [maps[i]['measurementID']]))[0];
+      breakingHeight.stateID = (await State.filter(where: "stateID = ?", whereArgs: [maps[i]['stateID']]))[0];
+      breakingHeights.add(breakingHeight);
+    }
+    return breakingHeights;
   }
-}*/
+}
