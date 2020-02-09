@@ -25,7 +25,7 @@ abstract class Model {
         table,
         this.toMap(),
         where: id + " = ?",
-        whereArgs: [id],
+        whereArgs: [this.id],
     );
   }
 
@@ -501,8 +501,13 @@ class Period extends Model{
 class User extends Model{
   final int userID;
   final String username;
+  final String email;
+  final String firstname;
+  final String lastname;
+  String rol;
+  bool login;
 
-  User({this.userID, this.username}){
+  User({this.userID, this.username, this.email, this.firstname, this.lastname, this.login, this.rol}){
     super.id = this.userID;
   }
 
@@ -510,15 +515,28 @@ class User extends Model{
   Map<String, dynamic> toMap(){
     return {
       'userID': userID,
-      'username': username
+      'username': username,
+      'email': email,
+      'firstname': firstname,
+      'lastname': lastname,
+      'login': login,
+      'rol': rol
     };
+  }
+
+  @override
+  String toString(){
+    return toMap().toString();
   }
 
   static Future<List<User>> objects() async{
     final List<Map<String, dynamic>> maps = await Model.query("User", );
     List<User> users = new List<User>();
     for(int i=0; i< maps.length; i++){
-      User user = new User(userID: maps[i]["userID"], username: maps[i]["userHour"]);
+      User user = new User(userID: maps[i]["userID"], username: maps[i]["username"], email: maps[i]["email"],
+          firstname: maps[i]["firstname"], lastname: maps[i]["lastname"], login: maps[i]["login"] == 1 ? true : false,
+          rol: maps[i]["rol"]
+      );
       users.add(user);
     }
     return users;
@@ -538,7 +556,10 @@ class User extends Model{
         limit: limit, offset: offset);
     List<User> users = new List<User>();
     for(int i=0; i< maps.length; i++){
-      User user = new User(userID: maps[i]["userID"], username: maps[i]["userHour"]);
+      User user = new User(userID: maps[i]["userID"], username: maps[i]["username"], email: maps[i]["email"],
+          firstname: maps[i]["firstname"], lastname: maps[i]["lastname"], login: maps[i]["login"] == 1 ? true : false,
+          rol: maps[i]["rol"]
+      );
       users.add(user);
     }
     return users;

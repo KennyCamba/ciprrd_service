@@ -1,6 +1,4 @@
 import 'dart:async';
-
-import 'package:ciprrd_service/sql/Insert.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -20,12 +18,10 @@ class Connection {
     }
 
     Future delete(String path) async{
-      print("aaaaaaaaaaaaa");
       return deleteDatabase(join(await getDatabasesPath(), path));
     }
 
     Future open(String path) async {
-      //await deleteDatabase(join(await getDatabasesPath(), path));
       database = openDatabase(
         // Set the path to the database.
         join(await getDatabasesPath(), path),
@@ -86,7 +82,12 @@ class Connection {
           db.execute(
             """CREATE TABLE User(
                   userID INTEGER PRIMARY KEY,
-                  username TEXT
+                  username TEXT,
+                  email TEXT,
+                  firstname TEXT,
+                  lastname TEXT,
+                  login BOOL,
+                  rol TEXT
                   )""",
           );
           db.execute(
