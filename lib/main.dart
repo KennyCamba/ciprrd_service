@@ -1,10 +1,12 @@
-import 'package:bubble_tab_indicator/bubble_tab_indicator.dart';
 import 'package:ciprrd_service/session/session.dart';
 import 'package:ciprrd_service/sql/models.dart' as models;
 import 'package:ciprrd_service/values/colors.dart';
+import 'package:ciprrd_service/views/data.dart';
+import 'package:ciprrd_service/views/home.dart';
 import 'package:ciprrd_service/views/login.dart';
+import 'package:ciprrd_service/views/map.dart';
+import 'package:ciprrd_service/views/observation.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:sqflite/sqflite.dart';
 
 import 'sql/connection.dart';
 import 'package:flutter/material.dart';
@@ -20,16 +22,7 @@ class MyApp extends StatelessWidget {
     if(user != null){
       print(user.login);
     }
-    //session = Session.getActiveSession();
     //await Connection.getInstance().delete("CIPRRDDB");
-    //await (await Connection.getInstance().database).execute("insert into Period(periodHour)	values('07:30')", );
-    //Province p = new Province(provinceName: "Guayas");
-   // int n = await p.save();
-    //Province p = (await Province.filter(where: "provinceID = ?", whereArgs: [1]))[0];
-    //Canton c = new Canton(cantonName: "Guayaquil", provinceID: p);
-    //c.save();
-    //print((await Canton.filter(where: "cantonID = ?", whereArgs: [1]))[0].toMap());
-    //print((await models.Province.filter(orderBy: "provinceName")));
     //user = models.User(username: "kennyCamba", email: "kacamba@espol.edu.ec", firstname: "Kenny", lastname: "Camba", login: false, rol: "admin");
     //await user.save();
   }
@@ -38,15 +31,16 @@ class MyApp extends StatelessWidget {
     init();
     if(user != null && user.login){
       return MaterialApp(
-        title: 'Flutter Demo',
+        debugShowCheckedModeBanner: false,
+        title: 'Main',
         theme: ThemeData(
           primarySwatch: AppColors.app_theme,
         ),
-        home: HomePage(title: '', user: user,),
+        home: MainPage(title: 'Inicio', user: user,),
       );
     }else {
       return MaterialApp(
-        title: 'Flutter Demo',
+        title: 'Login',
         theme: ThemeData(
           primarySwatch: AppColors.app_theme,
         ),
@@ -57,82 +51,81 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class LoginPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-        toolbarOpacity: 0.0,
-        elevation: 0.0,
 
-        title: TabBar(
-          indicatorSize: TabBarIndicatorSize.label,
-          unselectedLabelColor: Colors.grey,
-          indicator: BubbleTabIndicator(
-            padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
-            indicatorRadius: 15.7,
-            indicatorHeight: 25.0,
-            indicatorColor: AppColors.primary,
-            tabBarIndicatorSize: TabBarIndicatorSize.label
-          ),
-          labelColor: Colors.white,
-          tabs:[
-            Tab(text: "SIGN IN",),
-            Tab(text: "SIGN UP",)
-          ]
-        ),
-      ),
-        body: TabBarView(
-          children: <Widget>[
-            Login(),
-            Icon(Icons.email)
-          ],
-        ),
-      )
-    );
-  }
+class MainPage extends StatefulWidget {
+  MainPage({Key key, this.title, this.user}) : super(key: key);
 
-}
-
-class HomePage extends StatefulWidget {
-  HomePage({Key key, this.title, this.user}) : super(key: key);
-
-  final String title;
+  String title;
   final models.User user;
 
   @override
-  _MyHomePageState createState() => _MyHomePageState(user: user);
+  _MainPageState createState() => _MainPageState();
 }
 
-class _MyHomePageState extends State<HomePage> {
-  int _counter = 0;
+class _MainPageState extends State<MainPage> {
+  int _selectedDrawerIndex = 0;
+  _MainPageState();
 
-  final models.User user;
-
-  _MyHomePageState({this.user});
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
+  void _addObservation() {
+    setState(() => _selectedDrawerIndex = 2);
   }
 
-  void logout(BuildContext context){
-    user.login = false;
-    user.update();
+  Widget _getDrawerItemState(int pos){
+    switch(pos){
+      case 0:
+        return new HomeFragment(widget.user);
+      case 1:
+        return new DataFragment();
+      case 2:
+        return new ObservationFragment();
+      case 3:
+        return new MapFragment();
+      default:
+        return new Text("Error");
+    }
+  }
+
+  _onSelectItem(int index, String title){
+    setState(() => _selectedDrawerIndex = index);
+    setState(() => widget.title = title);
+    Navigator.of(context).pop();
+  }
+
+  void logout(){
     Navigator.pop(context);
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (contex) => LoginPage()),
+    showDialog(
+      context: context,
+      builder: (BuildContext context){
+        return AlertDialog(
+          title: new Text("Cierre de sesión"),
+          content: new Text("¿Está seguro que desea cerrar sesión?"),
+          actions: <Widget>[
+            new FlatButton(onPressed:(){
+              widget.user.login = false;
+              widget.user.update();
+              Navigator.pushReplacement(
+                this.context,
+                MaterialPageRoute(builder: (context) => LoginPage()),
+              );
+            },
+                child: Text("Aceptar")
+            ),
+            new FlatButton(onPressed:(){
+              Navigator.of(context).pop();
+            },
+                child: Text("Cancelar")
+            )
+          ],
+        );
+      }
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    models.User user = widget.user;
     return Scaffold(
+      backgroundColor: AppColors.app_theme.shade200,
       appBar: AppBar(
         title: Text(widget.title),
       ),
@@ -176,9 +169,7 @@ class _MyHomePageState extends State<HomePage> {
                   Text('Inicio'),
                 ],
               ),
-              onTap: () {
-                Navigator.pop(context);
-              },
+              onTap: () => _onSelectItem(0, "Inicio"),
             ),
             ListTile(
               title: Row(
@@ -188,10 +179,9 @@ class _MyHomePageState extends State<HomePage> {
                   Text('Datos'),
                 ],
               ),
-              onTap: () {
-                Navigator.pop(context);
-              },
+              onTap: () => _onSelectItem(1, "Datos"),
             ),
+            user.rol != "visited" ?
             ListTile(
               title: Row(
                 children: <Widget>[
@@ -200,10 +190,8 @@ class _MyHomePageState extends State<HomePage> {
                   Text('Agregar Observación'),
                 ],
               ),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
+              onTap: () => _onSelectItem(2, "Nueva Observación"),
+            ) : Text("", style: TextStyle(fontSize: 0.0),),
             ListTile(
               title: Row(
                 children: <Widget>[
@@ -212,9 +200,7 @@ class _MyHomePageState extends State<HomePage> {
                   Text('Mapa'),
                 ],
               ),
-              onTap: () {
-                Navigator.pop(context);
-              },
+              onTap: () => _onSelectItem(3, "Mapa"),
             ),
             ListTile(
               title: Row(
@@ -224,9 +210,7 @@ class _MyHomePageState extends State<HomePage> {
                   Text('Contáctanos'),
                 ],
               ),
-              onTap: () {
-                Navigator.pop(context);
-              },
+              onTap: () => _onSelectItem(4, "Contáctanos"),
             ),
             Divider(
               color: Colors.grey,
@@ -243,9 +227,7 @@ class _MyHomePageState extends State<HomePage> {
                   Text('Sobre nosotros'),
                 ],
               ),
-              onTap: () {
-                Navigator.pop(context);
-              },
+              onTap: () => _onSelectItem(5, "Sobre nosotros"),
             ),
             ListTile(
               title: Row(
@@ -255,9 +237,7 @@ class _MyHomePageState extends State<HomePage> {
                   Text('Privacy Policy'),
                 ],
               ),
-              onTap: () {
-                Navigator.pop(context);
-              },
+              onTap: () => _onSelectItem(6, "Privacy Policy"),
             ),
             ListTile(
               title: Row(
@@ -267,31 +247,17 @@ class _MyHomePageState extends State<HomePage> {
                   Text('Cerrar sesión'),
                 ],
               ),
-              onTap: () => logout(context),
+              onTap: () => logout(),
             ),
           ],
         ),
       ),
-      body: Center(
-
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.display1,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
+      body: _getDrawerItemState(_selectedDrawerIndex),
+      floatingActionButton: user.rol != "visited" ? FloatingActionButton(
+        onPressed: _addObservation,
+        tooltip: 'Nueva observación',
         child: Icon(Icons.add),
-      ),
+      ): null,
     );
   }
 }

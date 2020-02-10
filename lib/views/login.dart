@@ -1,11 +1,52 @@
+import 'package:bubble_tab_indicator/bubble_tab_indicator.dart';
 import 'package:ciprrd_service/main.dart';
 import 'package:ciprrd_service/session/session.dart';
 import 'package:ciprrd_service/sql/models.dart' as models;
 import 'package:ciprrd_service/values/colors.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:toast/toast.dart';
+
+
+class LoginPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            toolbarOpacity: 0.0,
+            elevation: 0.0,
+
+            title: TabBar(
+                indicatorSize: TabBarIndicatorSize.label,
+                unselectedLabelColor: Colors.grey,
+                indicator: BubbleTabIndicator(
+                    padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
+                    indicatorRadius: 15.7,
+                    indicatorHeight: 25.0,
+                    indicatorColor: AppColors.primary,
+                    tabBarIndicatorSize: TabBarIndicatorSize.label
+                ),
+                labelColor: Colors.white,
+                tabs:[
+                  Tab(text: "SIGN IN",),
+                  Tab(text: "SIGN UP",)
+                ]
+            ),
+          ),
+          body: TabBarView(
+            children: <Widget>[
+              Login(),
+              Icon(Icons.email)
+            ],
+          ),
+        )
+    );
+  }
+
+}
 
 class Login extends StatefulWidget {
   @override
@@ -31,7 +72,7 @@ class _Login extends State<Login>{
       print("usu2: " + usu2.login.toString());
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (contex) => HomePage(title: "", user: usu,)),
+        MaterialPageRoute(builder: (contex) => MainPage(title: "", user: usu,)),
       );
     }else{
       Toast.show("No login", context, duration: Toast.LENGTH_SHORT, gravity: Toast.BOTTOM);
